@@ -1,16 +1,20 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import User from './models/user.model.js'; 
 import Item from './models/item.model.js';
 import Order from './models/order.model.js';
 import { connectDB } from './config/db.js';
+import cors from 'cors';
 
 dotenv.config();
 const app = express();
 app.use(express.json());
 connectDB();
+const JWT_SECRET = process.env.JWT_SECRET;
+app.use(cors());
 
 app.post('/signup', async (req, res) => {
     try {
@@ -42,40 +46,93 @@ app.post('/signup', async (req, res) => {
       res.status(500).json({ message: 'Server error' });
     }
   });
-  
-  app.post('/login', async (req, res) => {
-    try {
-      const { email, password } = req.body;
-  
-      if (!email || !password) {
-        return res.status(400).json({ message: 'Please fill in all fields' });
-      }
-  
-      const user = await User.findOne({ email });
-      if (!user) {
-        console.log('User not found');
-        return res.status(401).json({ message: 'Invalid email or password' });
-      }
-  
-    //   console.log('Stored hash:', user.password);
-    //   console.log('Password provided:', password);
-  
-      const isMatch = await bcrypt.compare(password.trim(), user.password);
-      if (!isMatch) {
-        console.log('Password does not match');
-        return res.status(401).json({ message: 'Invalid email or password' });
-      }
-  
-      res.status(200).json({ message: 'Login successful' });
-    } catch (error) {
-      console.error('Error during login:', error.message);
-      res.status(500).json({ message: 'Server error' });
-    }
-  });
 
-  app.get('/user', async (req, res) => {
+app.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Please fill in all fields' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      console.log('User not found');
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    const isMatch = await bcrypt.compare(password.trim(), user.password);
+    if (!isMatch) {
+      console.log('Password does not match');
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    // Generate a JWT token
+    const token = jwt.sign({ userId: user._id }, JWT_SECRET, {
+      expiresIn: '7d' // Token expiration time, e.g., 7 days
+    });
+
+    // Send the token to the client
+    res.status(200).json({ message: 'Login successful', token });
+  } catch (error) {
+    console.error('Error during login:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) return res.status(401).json({ message: 'Access denied, token missing!' });
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ message: 'Invalid token' });
+
+    req.user = user;
+    next();
+  });
+};
+
+app.post('/updateUser',authenticateToken, async (req, res) => {
+  try {
+    const { firstName, lastName, age, contactNumber } = req.body;
+    const userId=req.user.userId;
+
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+
+    // Find user by ID and update the fields if they are provided
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        ...(firstName && { firstName }),
+        ...(lastName && { lastName }),
+        ...(age && { age }),
+        ...(contactNumber && { contactNumber }),
+      },
+      { new: true, runValidators: true } // options to return the updated document and run validators
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json({
+      message: 'User updated successfully',
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error('Error updating user:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+  app.get('/user',authenticateToken, async (req, res) => {
     try {
-      const { userId } = req.query; // Retrieve userId from query parameters
+      const userId=req.user.userId
   
       // Validate the userId
       if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
@@ -104,9 +161,10 @@ app.post('/signup', async (req, res) => {
     }
   });
   
-  app.post('/sell', async (req, res) => {
+  app.post('/sell',authenticateToken, async (req, res) => {
     try {
-      const { userId, name, price, description, category } = req.body;
+      const { name, price, description, category } = req.body;
+      const userId=req.user.userId;
   
       if (!userId || !name || !price || !description || !category) {
         return res.status(400).json({ message: 'All fields are required' });
@@ -140,10 +198,10 @@ app.post('/signup', async (req, res) => {
     }
   });
 
-  app.get('/search', async (req, res) => {
+  app.get('/search',authenticateToken, async (req, res) => {
     try {
       const { name, category } = req.query;
-      const { userId } = req.body; // Extract userId from request body
+      const userId=req.user.userId;
   
       // Build the query object
       const query = {};
@@ -199,7 +257,7 @@ app.post('/signup', async (req, res) => {
     }
   });
   
-  app.get('/items', async (req, res) => {
+  app.get('/items',authenticateToken, async (req, res) => {
     try {
       const { itemId } = req.query; // Retrieve itemId from query parameters
   
@@ -234,9 +292,10 @@ app.post('/signup', async (req, res) => {
     }
   });
 
-  app.post('/cart', async (req, res) => {
+  app.post('/cart',authenticateToken, async (req, res) => {
     try {
-      const { userId, itemId, action } = req.body; // Get userId, itemId, and action from request body
+      const { itemId, action } = req.body; // Get userId, itemId, and action from request body
+      const userId=req.user.userId;
   
       // Validate input
       if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
@@ -296,10 +355,9 @@ app.post('/signup', async (req, res) => {
     }
   });
 
-  app.get('/mycart', async (req, res) => {
+  app.get('/mycart',authenticateToken, async (req, res) => {
     try {
-      let { userId } = req.query; // Use 'let' to allow reassignment
-      userId = userId.trim();
+      const userId=req.user.userId;
   
       // Validate the userId
       if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
@@ -338,17 +396,13 @@ app.post('/signup', async (req, res) => {
     }
   });
 
-  app.post('/checkout', async (req, res) => {
+  app.post('/checkout',authenticateToken, async (req, res) => {
     try {
-      // Use 'body' if you intended to pass userId in the request body
-      let { userId } = req.body; // Change to req.body if that's the case
-  
+      const userId=req.user.userId;
       // Validate that userId is provided
-      if (typeof userId !== 'string' || !userId.trim()) {
+      if (typeof userId !== 'string') {
         return res.status(400).json({ message: 'User ID is required' });
       }
-  
-      userId = userId.trim();
   
       // Validate the userId format
       if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -371,14 +425,15 @@ app.post('/signup', async (req, res) => {
       for (const item of user.cartItems) {
         // Generate a 6-digit OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  
+        const hashedOtp = await bcrypt.hash(otp, 10);
+
         // Create an order
         const order = new Order({
           buyerId: userId,
           sellerId: item.sellerId,
           itemId: item._id,
           amount: item.price,
-          hashedOtp: otp, // Note: In a real application, consider hashing the OTP
+          hashedOtp: hashedOtp, // Note: In a real application, consider hashing the OTP
           orderStatus: 'pending'
         });
   
@@ -411,9 +466,9 @@ app.post('/signup', async (req, res) => {
     }
   });
   
-  app.get('/recd_orders', async (req, res) => {
+  app.get('/recd_orders', authenticateToken, async (req, res) => {
     try {
-      const { userId } = req.body;
+      const userId = req.user.userId;
   
       // Validate the userId
       if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
@@ -427,6 +482,7 @@ app.post('/signup', async (req, res) => {
   
       // Format the response
       const formattedOrders = orders.map(order => ({
+        orderId: order._id, // Include order ID
         itemName: order.itemId.name,
         itemPrice: order.itemId.price,
         buyerName: order.buyerId.name,
@@ -443,7 +499,61 @@ app.post('/signup', async (req, res) => {
     }
   });
   
-  app.post('/cnfm_order', async (req, res) => {
+  app.get('/order_details',authenticateToken, async (req, res) => {
+    try {
+      const userId=req.user.userId;
+  
+      // Validate the userId
+      if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+      }
+  
+      // Find pending orders where the user is the buyer
+      const pendingOrders = await Order.find({
+        buyerId: userId,
+        orderStatus: 'pending'
+      }).populate('itemId', 'name price');
+  
+      // Find successful orders where the user is the buyer
+      const successfulBoughtOrders = await Order.find({
+        orderStatus: 'success',
+        buyerId: userId
+      }).populate('itemId', 'name price');
+  
+      // Find successful orders where the user is the seller
+      const successfulSoldOrders = await Order.find({
+        orderStatus: 'success',
+        sellerId: userId
+      }).populate('itemId', 'name price');
+  
+      // Format orders
+      const formatOrder = (order) => ({
+        orderId: order._id,
+        itemName: order.itemId.name,
+        itemPrice: order.itemId.price,
+        buyerId: order.buyerId,
+        sellerId: order.sellerId,
+        orderStatus: order.orderStatus
+      });
+  
+      const formattedPendingOrders = pendingOrders.map(formatOrder);
+      const formattedSuccessfulBoughtOrders = successfulBoughtOrders.map(formatOrder);
+      const formattedSuccessfulSoldOrders = successfulSoldOrders.map(formatOrder);
+  
+      // Send response with both pending and successful orders
+      res.status(200).json({
+        message: 'Order details retrieved successfully',
+        pendingOrders: formattedPendingOrders,
+        successfulBoughtOrders: formattedSuccessfulBoughtOrders,
+        successfulSoldOrders: formattedSuccessfulSoldOrders
+      });
+    } catch (error) {
+      console.error('Error retrieving order details:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });  
+  
+  app.post('/cnfm_order', authenticateToken, async (req, res) => {
     try {
       const { orderId } = req.query;
       const { otp } = req.body;
@@ -462,14 +572,18 @@ app.post('/signup', async (req, res) => {
         return res.status(404).json({ message: 'Order not found' });
       }
   
-      // Verify the OTP - in production, compare hashed OTPs
-      if (order.hashedOtp !== otp) {
+      // Verify the OTP using bcrypt.compare
+      const isOtpValid = await bcrypt.compare(otp, order.hashedOtp);
+      if (!isOtpValid) {
         return res.status(400).json({ message: 'Invalid OTP' });
       }
   
       // Update the order status to 'success'
       order.orderStatus = 'success';
       await order.save();
+  
+      // Remove the item from the items collection using itemId from the order
+      await Item.findByIdAndDelete(order.itemId);
   
       // Cancel other orders with the same sellerId and itemId
       await Order.updateMany(
@@ -488,9 +602,8 @@ app.post('/signup', async (req, res) => {
       console.error('Error confirming order:', error);
       res.status(500).json({ message: 'Server error' });
     }
-  });
+  });  
   
-
   app.get('/', (req, res) => {
     res.send('E-Commerce API is running....');
   });
