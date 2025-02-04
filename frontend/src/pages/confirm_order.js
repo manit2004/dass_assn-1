@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -15,12 +15,20 @@ function ConfirmOrder() {
   // Debugging logs
   console.log('Order ID:', orderId);
 
+  useEffect(() => {
+    // Check for authentication token on component mount
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+    }
+  }, [navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('You must be logged in to confirm orders.');
+        navigate('/login');
         return;
       }
 

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 function Sell() {
   const [name, setName] = useState('');
@@ -9,6 +9,14 @@ function Sell() {
   const [category, setCategory] = useState('clothing'); // Default value for dropdown
   const [message, setMessage] = useState('');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check for authentication token on component mount
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -45,6 +53,14 @@ function Sell() {
 
   return (
     <div className="sell-container">
+      <div className="navigation-links mb-3">
+        <Link to="/user" className="btn btn-link">User Profile</Link>
+        <Link to="/mycart" className="btn btn-link">My Cart</Link>
+        <Link to="/search" className="btn btn-link">Search Items</Link>
+        <Link to="/sell" className="btn btn-link">Sell Items</Link>
+        <Link to="/recd_orders" className="btn btn-link">Delivery</Link>
+        <Link to="/order_details" className="btn btn-link">Order History</Link>
+      </div>
       <h2>List an Item for Sale</h2>
       <form onSubmit={handleSubmit}>
         <div className="form-group">

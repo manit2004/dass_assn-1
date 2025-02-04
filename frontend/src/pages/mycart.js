@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link} from 'react-router-dom';
 import './MyCart.css'; // Adjust the path according to your project structure
 
 function MyCart() {
@@ -11,8 +11,15 @@ function MyCart() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Check for authentication token on component mount
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
     fetchCartItems();
-  }, []);
+  }, [navigate]);
 
   const fetchCartItems = async () => {
     try {
@@ -39,6 +46,11 @@ function MyCart() {
   const handleRemoveFromCart = async (itemId) => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
       const response = await axios.post(
         'http://localhost:5000/cart',
         { itemId, action: 'remove' },
@@ -60,6 +72,12 @@ function MyCart() {
   const handleCheckout = async () => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        alert('You must be logged in to proceed with checkout.');
+        navigate('/login');
+        return;
+      }
+
       const response = await axios.post(
         'http://localhost:5000/checkout',
         {},
@@ -84,6 +102,14 @@ function MyCart() {
 
   return (
     <div className="cart-container">
+      <div className="navigation-links mb-3">
+        <Link to="/user" className="btn btn-link">User Profile</Link>
+        <Link to="/mycart" className="btn btn-link">My Cart</Link>
+        <Link to="/search" className="btn btn-link">Search Items</Link>
+        <Link to="/sell" className="btn btn-link">Sell Items</Link>
+        <Link to="/recd_orders" className="btn btn-link">Delivery</Link>
+        <Link to="/order_details" className="btn btn-link">Order History</Link>
+      </div>
       <h2>My Cart</h2>
       <div className="cart-items">
         {cartItems.length === 0 ? (

@@ -12,14 +12,15 @@ function Items() {
   const itemId = queryParams.get('itemId');
 
   useEffect(() => {
+    // Check for authentication token on component mount
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
     const fetchItemDetails = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          navigate('/login');
-          return;
-        }
-
         const response = await axios.get('http://localhost:5000/items', {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -42,6 +43,11 @@ function Items() {
   const handleAddToCart = async () => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
       const response = await axios.post(
         'http://localhost:5000/cart',
         { itemId, action: 'add' },

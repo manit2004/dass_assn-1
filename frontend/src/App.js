@@ -11,6 +11,7 @@ import Sell from './pages/sell';
 import Delivery from './pages/delivery';
 import ConfirmOrder from './pages/confirm_order';
 import Orders from './pages/orders';
+import Welcome from './pages/welcome';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
           <Route path="/recd_orders" element={<Delivery />} />
           <Route path="/cnfm_order" element={<ConfirmOrder />} />
           <Route path="/order_details" element={<Orders />} />
+          <Route path="/" element={<Welcome />} />
         </Routes>
       </div>
     </Router>

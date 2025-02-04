@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import UpdateUser from './updateuser';
 
 function User() {
@@ -47,6 +47,15 @@ function User() {
   }
 
   return (
+    <div>
+      <div className="navigation-links mb-3">
+        <Link to="/user" className="btn btn-link">User Profile</Link>
+        <Link to="/mycart" className="btn btn-link">My Cart</Link>
+        <Link to="/search" className="btn btn-link">Search Items</Link>
+        <Link to="/sell" className="btn btn-link">Sell Items</Link>
+        <Link to="/recd_orders" className="btn btn-link">Delivery</Link>
+        <Link to="/order_details" className="btn btn-link">Order History</Link>
+      </div>
     <div className="user-details">
       <h2>User Profile</h2>
       <p><strong>First Name:</strong> {user.firstName}</p>
@@ -58,6 +67,7 @@ function User() {
       
       <UpdateUser user={user} onUpdate={handleUpdate} />
     </div>
+  </div>
   );
 }
 

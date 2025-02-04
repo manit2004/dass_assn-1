@@ -1,15 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+
 function UpdateUser({ user, onUpdate }) {
   const [firstName, setFirstName] = useState(user.firstName || '');
   const [lastName, setLastName] = useState(user.lastName || '');
   const [age, setAge] = useState(user.age || '');
   const [contactNumber, setContactNumber] = useState(user.contactNumber || '');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check for authentication token on component mount
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        alert('You must be logged in to update your information.');
+        navigate('/login');
+        return;
+      }
+
       const response = await axios.post(
         'http://localhost:5000/updateUser',
         { firstName, lastName, age, contactNumber },

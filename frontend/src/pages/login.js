@@ -12,7 +12,7 @@ function Login() {
     try {
       const response = await axios.post('http://localhost:5000/login', { email, password });
       localStorage.setItem('token', response.data.token);
-      navigate('/search'); // Redirect to a profile or dashboard page
+      navigate('/user'); // Redirect to a profile or dashboard page
     } catch (error) {
       console.error('Login failed:', error);
       alert('Invalid email or password');

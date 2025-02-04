@@ -183,6 +183,7 @@ app.post('/updateUser',authenticateToken, async (req, res) => {
         description,
         category,
         sellerId: userId,
+        isSold: false,
       });
   
       // Save the new item to the database
@@ -204,7 +205,7 @@ app.post('/updateUser',authenticateToken, async (req, res) => {
       const userId=req.user.userId;
   
       // Build the query object
-      const query = {};
+      const query = { isSold: false };
   
       // If a name is provided, add a case-insensitive regex search to the query
       if (name) {
@@ -499,9 +500,9 @@ app.post('/updateUser',authenticateToken, async (req, res) => {
     }
   });
   
-  app.get('/order_details',authenticateToken, async (req, res) => {
+  app.get('/order_details', authenticateToken, async (req, res) => {
     try {
-      const userId=req.user.userId;
+      const userId = req.user.userId;
   
       // Validate the userId
       if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
@@ -527,14 +528,17 @@ app.post('/updateUser',authenticateToken, async (req, res) => {
       }).populate('itemId', 'name price');
   
       // Format orders
-      const formatOrder = (order) => ({
-        orderId: order._id,
-        itemName: order.itemId.name,
-        itemPrice: order.itemId.price,
-        buyerId: order.buyerId,
-        sellerId: order.sellerId,
-        orderStatus: order.orderStatus
-      });
+      const formatOrder = (order) => {
+        const item = order.itemId || {};
+        return {
+          orderId: order._id,
+          itemName: item.name || 'Unknown',
+          itemPrice: item.price || 0,
+          buyerId: order.buyerId,
+          sellerId: order.sellerId,
+          orderStatus: order.orderStatus
+        };
+      };
   
       const formattedPendingOrders = pendingOrders.map(formatOrder);
       const formattedSuccessfulBoughtOrders = successfulBoughtOrders.map(formatOrder);
@@ -583,7 +587,7 @@ app.post('/updateUser',authenticateToken, async (req, res) => {
       await order.save();
   
       // Remove the item from the items collection using itemId from the order
-      await Item.findByIdAndDelete(order.itemId);
+      await Item.findByIdAndUpdate(order.itemId, { isSold: true });
   
       // Cancel other orders with the same sellerId and itemId
       await Order.updateMany(

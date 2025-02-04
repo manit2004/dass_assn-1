@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useNavigate, Link} from 'react-router-dom';
 
 function Delivery() {
   const [orders, setOrders] = useState([]);
@@ -7,16 +8,24 @@ function Delivery() {
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otp, setOtp] = useState('');
   const [orderIdToConfirm, setOrderIdToConfirm] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
+    // Check for authentication token on component mount
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
     fetchPendingOrders();
-  }, []);
+  }, [navigate]);
 
   const fetchPendingOrders = async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('You must be logged in to view orders.');
+        navigate('/login');
         return;
       }
 
@@ -44,7 +53,7 @@ function Delivery() {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('You must be logged in to confirm orders.');
+        navigate('/login');
         return;
       }
 
@@ -68,6 +77,14 @@ function Delivery() {
 
   return (
     <div className="delivery-container">
+      <div className="navigation-links mb-3">
+        <Link to="/user" className="btn btn-link">User Profile</Link>
+        <Link to="/mycart" className="btn btn-link">My Cart</Link>
+        <Link to="/search" className="btn btn-link">Search Items</Link>
+        <Link to="/sell" className="btn btn-link">Sell Items</Link>
+        <Link to="/recd_orders" className="btn btn-link">Delivery</Link>
+        <Link to="/order_details" className="btn btn-link">Order History</Link>
+      </div>
       <h2>Pending Orders</h2>
       {message && <p>{message}</p>}
       {orders.length === 0 ? (

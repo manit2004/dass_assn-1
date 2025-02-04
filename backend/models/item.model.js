@@ -1,4 +1,3 @@
-// models/item.model.js
 import mongoose from 'mongoose';
 
 const itemSchema = new mongoose.Schema({
@@ -24,6 +23,10 @@ const itemSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
+  isSold: {
+    type: Boolean,
+    default: false, // Default to false indicating the item is not sold initially
+  }
 }, {
   timestamps: true,
 });
