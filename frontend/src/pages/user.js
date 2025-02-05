@@ -36,6 +36,7 @@ function User() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/login');
+    window.location.href = 'http://localhost:5000/logout';
   };
 
   const handleUpdate = (updatedUser) => {

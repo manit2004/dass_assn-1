@@ -57,6 +57,7 @@ function Search() {
         <Link to="/sell" className="btn btn-link">Sell Items</Link>
         <Link to="/recd_orders" className="btn btn-link">Delivery</Link>
         <Link to="/order_details" className="btn btn-link">Order History</Link>
+        <Link to="/chatbot" className="btn btn-link">Chat</Link>
       </div>
       <div className="search-bar">
         <input
