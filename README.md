@@ -47,8 +47,6 @@ The application allows users to:
 MONGODB_URL="your-mongodb-connection-string"
 JWT_SECRET="your-secure-jwt-secret"
 RECAPTCHA_SECRET_KEY="your-recaptcha-secret-key"
-SESSION_SECRET="your-session-secret"
-REACT_APP_RECAPTCHA_SITE_KEY="your-recaptcha-site-key"
 ```
 
 2. **Backend directory `.env`** - Contains only the OpenAI API key:
